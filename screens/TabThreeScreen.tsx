@@ -1,14 +1,13 @@
-import { StyleSheet, FlatList, TextInput, Pressable } from 'react-native';
-import { FontAwesome } from '@expo/vector-icons';
+import { StyleSheet, FlatList, Pressable } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as WebBrowser from 'expo-web-browser';
 
 import { Text, View } from '../components/Themed';
 import { RootTabScreenProps } from '../types';
 import { useEffect, useState } from 'react';
-
 import ContainerDB from '../helpers/ContainerDB';
 
 export default function TabOneScreen({ navigation }: RootTabScreenProps<'TabOne'>) {
-  const [text, onChangeText] = useState<any | null>(null);
   const [data, setData] = useState<string[]>([]);
   const [activeContainerId, setActiveContainerId] = useState<string>('');
 
@@ -46,89 +45,39 @@ export default function TabOneScreen({ navigation }: RootTabScreenProps<'TabOne'
 
   return (
     <View style={styles.container}>
-      <View style={styles.containerIdInputWrapper}>
-        <TextInput
-          style={styles.containerIdInput}
-          onChangeText={onChangeText}
-          value={text}
-          placeholder="New container ID"
-        />
-        <Pressable
-          onPress={() => {
-            ContainerDB.createContainer(text).then(() => loadContainerIds()).then(() => onChangeText(''));
-          }}
-          style={({ pressed }) => [
-            {
-              borderWidth: pressed
-                ? 1
-                : 0,
-              padding: pressed
-                ? 14
-                : 15
-            },
-            styles.containerIdSubmitBtn
-          ]}
-        >
-          <FontAwesome
-            name="arrow-right"
-            size={25}
-            color='white'
-          />
-        </Pressable>
-      </View>
       <View style={{
         marginTop: 10,
         padding: 20,
         display: 'flex',
         alignItems: 'center'
       }}>
-        <Text style={styles.title}>Containers</Text>
+        <Text style={styles.title2}>Press a container to view its code</Text>
       </View>
       <View style={styles.containerIdPickerWrapper}>
         <FlatList
           data={data}
           renderItem={({ item }) => (
-            <View style={[
-              styles.listItemContainer,
-              (item === activeContainerId
-                ? { backgroundColor: 'rgba(46, 204, 64, 0.3)' }
-                : { backgroundColor: 'rgba(46, 204, 64, 0)' }
-              )
-            ]}>
+            <View style={styles.listItemContainer}>
               <Pressable
                 onPress={() => {
-                  ContainerDB.setActiveContainerId(item);
-                  setActiveContainerId(item);
+                  ContainerDB.getContainer(item).then((container) => {
+                    if (container === null) {
+                      return;
+                    }
+
+                    WebBrowser.openBrowserAsync(`https://api.jdeurt.xyz/qr-code?data=${container.data.join('%0d')}`);
+                  });
                 }}
                 style={({ pressed }) => [
                   {
                     backgroundColor: pressed
-                      ? 'rgba(46, 204, 64, 0.3)'
-                      : 'rgba(46, 204, 64, 0)'
+                      ? 'rgba(255, 255, 255, 0.3)'
+                      : 'rgba(255, 255, 255, 0)'
                   },
                   styles.listItem
                 ]}
               >
                 <Text>{item}</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  ContainerDB.deleteContainer(item).then(() => loadContainerIds());
-                }}
-                style={({ pressed }) => [
-                  {
-                    opacity: pressed
-                      ? 0.5
-                      : 1,
-                  },
-                  styles.listItemActionBtn
-                ]}
-              >
-                <FontAwesome
-                  name="times"
-                  size={20}
-                  color='white'
-                />
               </Pressable>
             </View>
           )}
@@ -148,9 +97,6 @@ const styles = StyleSheet.create({
   },
   listItem: {
     flexGrow: 1,
-    padding: 20
-  },
-  listItemActionBtn: {
     padding: 20
   },
   containerIdInputWrapper: {
@@ -192,3 +138,4 @@ const styles = StyleSheet.create({
   },
 
 });
+
