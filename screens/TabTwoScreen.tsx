@@ -1,20 +1,25 @@
 import { Button, Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { BarCodeScanner } from "expo-barcode-scanner";
+import { FontAwesome } from '@expo/vector-icons';
 
 import EditScreenInfo from '../components/EditScreenInfo';
 import { Text, View } from '../components/Themed';
 import { RootTabScreenProps } from '../types';
 import React, { useEffect, useState } from 'react';
 import ContainerDB from '../helpers/ContainerDB';
+import NotificationBanner from '../components/NotificationBanner';
+import { color, cssColor } from '../helpers/colorgen';
 
 const AMAZON_360_ID_REGEXP = /D\w+RMA/;
 
 export default function TabTwoScreen({ navigation }: RootTabScreenProps<'TabOne'>) {
   const [hasPermission, setHasPermission] = useState<Boolean | null>(null);
-  const [scanningStatus, setScanningStatus] = useState(false);
+  const [scanningStatus, setScanningStatus] = useState<'add' | 'remove' | 'none'>('none');
   const [activeContainerId, setActiveContainerId] = useState<string>('');
   const [scanResult, setScanResult] = useState<'none' | 'valid' | 'invalid'>('none');
   const [screenFocused, setScreenFocused] = useState(false);
+  const [lastPushedCodeVale, setLastPushedCodeValue] = useState('');
+  const [lastPushedScanningStatus, setLastPushedScanningStatus] = useState<'add' | 'remove' | 'none'>('none');
 
   useEffect(() => {
     (async () => {
@@ -50,7 +55,19 @@ export default function TabTwoScreen({ navigation }: RootTabScreenProps<'TabOne'
     if (data.toString().match(AMAZON_360_ID_REGEXP)) {
       setScanResult('valid');
 
-      ContainerDB.addToContainer(activeContainerId, [data.toString()]);
+      if (scanningStatus === 'add') {
+        ContainerDB.addToContainer(activeContainerId, [data.toString()]).then(() => {
+          setLastPushedCodeValue(data.toString());
+        });
+      } else if (scanningStatus === 'remove') {
+        ContainerDB.removeFromContainer(activeContainerId, [data.toString()]).then(() => {
+          setLastPushedCodeValue(data.toString());
+        });
+      } else {
+        alert('Encountered unexpected scan status value!');
+      }
+
+      setLastPushedScanningStatus(scanningStatus);
     } else {
       setScanResult('invalid');
     }
@@ -90,7 +107,7 @@ export default function TabTwoScreen({ navigation }: RootTabScreenProps<'TabOne'
       {screenFocused
         ? <BarCodeScanner
           barCodeTypes={[BarCodeScanner.Constants.BarCodeType.qr, BarCodeScanner.Constants.BarCodeType.code128, BarCodeScanner.Constants.BarCodeType.datamatrix]}
-          onBarCodeScanned={scanningStatus ? handleBarCodeScanned : undefined}
+          onBarCodeScanned={scanningStatus !== 'none' ? handleBarCodeScanned : undefined}
           style={StyleSheet.absoluteFillObject}
         />
         : undefined}
@@ -100,7 +117,45 @@ export default function TabTwoScreen({ navigation }: RootTabScreenProps<'TabOne'
           scanStatusVisualUpdate()
         ]}
       ></View>
-      <View style={styles.scanBtnContainer}>
+      <NotificationBanner
+        type={lastPushedScanningStatus === 'remove' ? 'error' : 'success'}
+        size='compact'
+        timeout={5000}
+        text={
+          lastPushedScanningStatus === 'none'
+            ? ''
+            : `${lastPushedScanningStatus === 'remove' ? '-' : '+'} ${lastPushedCodeVale}`
+        }
+        style={styles.notificationBanner}
+      />
+      <View style={styles.unscanBtnContainer} pointerEvents='box-none'>
+        <Pressable
+          style={({ pressed }) => [
+            styles.unscanBtn,
+            {
+              backgroundColor: pressed
+                ? cssColor('red', 1)
+                : cssColor('red', 0.5),
+              borderColor: pressed
+                ? cssColor('red', 1)
+                : cssColor('red', 0.5)
+            }
+          ]}
+          onPressIn={() => {
+            setScanningStatus('remove');
+          }}
+          onPressOut={() => {
+            setScanningStatus('none');
+          }}
+        >
+          <FontAwesome
+            name="times"
+            size={15}
+            color={cssColor('red', 0.5)}
+          />
+        </Pressable>
+      </View>
+      <View style={styles.scanBtnContainer} pointerEvents='box-none'>
         <Pressable
           style={({ pressed }) => [
             styles.scanBtn,
@@ -111,13 +166,12 @@ export default function TabTwoScreen({ navigation }: RootTabScreenProps<'TabOne'
             }
           ]}
           onPressIn={() => {
-            setScanningStatus(true);
+            setScanningStatus('add');
           }}
           onPressOut={() => {
-            setScanningStatus(false);
+            setScanningStatus('none');
           }}
         >
-          <View></View>
         </Pressable>
       </View>
       <View style={styles.activeIdIndicatorContainer}>
@@ -132,6 +186,36 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  notificationBanner: {
+    display: 'flex',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%'
+  },
+  unscanBtnContainer: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    flexDirection: 'row',
+    position: 'absolute',
+    bottom: 50,
+    right: 0,
+    width: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0)'
+  },
+  unscanBtn: {
+    marginRight: 10,
+    borderWidth: 5,
+    borderColor: cssColor('red', 0.5),
+    borderRadius: 50,
+    width: 50,
+    height: 50,
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   scanBtnContainer: {
     display: 'flex',

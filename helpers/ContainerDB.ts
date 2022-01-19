@@ -68,6 +68,25 @@ export default class ContainerDB {
         return container;
     }
 
+    static async removeFromContainer(id: string, items: string[]) {
+        const currentData = await AsyncStorage.getItem(this.serializeId(id));
+
+        if (currentData === null) {
+            return null;
+        }
+
+        const container: Container = JSON.parse(currentData);
+
+        container.data = container.data.filter((val) => !items.includes(val));
+
+        await AsyncStorage.setItem(
+            this.serializeId(id),
+            JSON.stringify(container)
+        );
+
+        return container;
+    }
+
     static async getContainer(id: string): Promise<Container | null> {
         const data = await AsyncStorage.getItem(this.serializeId(id));
 
