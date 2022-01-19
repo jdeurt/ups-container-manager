@@ -65,7 +65,10 @@ export default function TabOneScreen({ navigation }: RootTabScreenProps<'TabOne'
                       return;
                     }
 
-                    WebBrowser.openBrowserAsync(`https://api.jdeurt.xyz/qr-code?data=${container.data.join('%0d')}`);
+                    navigation.navigate('QRCodeModal', {
+                      container
+                    });
+                    // WebBrowser.openBrowserAsync(`https://api.jdeurt.xyz/qr-code?data=${container.data.join('%0d')}`);
                   });
                 }}
                 style={({ pressed }) => [
