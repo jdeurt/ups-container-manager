@@ -1,5 +1,7 @@
 import { Button, Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { BarCodeScanner } from "expo-barcode-scanner";
+import { Audio } from 'expo-av';
+import * as Haptics from 'expo-haptics';
 import { FontAwesome } from '@expo/vector-icons';
 
 import EditScreenInfo from '../components/EditScreenInfo';
@@ -20,6 +22,9 @@ export default function TabTwoScreen({ navigation }: RootTabScreenProps<'TabOne'
   const [screenFocused, setScreenFocused] = useState(false);
   const [lastPushedCodeVale, setLastPushedCodeValue] = useState('');
   const [lastPushedScanningStatus, setLastPushedScanningStatus] = useState<'add' | 'remove' | 'none'>('none');
+  const [scanSound, setScanSound] = useState<Audio.Sound | undefined>(undefined);
+  const [unscanSound, setUnscanSound] = useState<Audio.Sound | undefined>(undefined);
+  const [isPlayingSound, setIsPlayingSound] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -27,6 +32,55 @@ export default function TabTwoScreen({ navigation }: RootTabScreenProps<'TabOne'
       setHasPermission(status === 'granted');
     })();
   }, []);
+
+  const playScanSound = async () => {
+    if (isPlayingSound) {
+      return;
+    }
+
+    setIsPlayingSound(true);
+
+    const { sound } = await Audio.Sound.createAsync(
+      require('../assets/sounds/scan.mp3')
+    );
+    setScanSound(sound);
+
+    await sound.playAsync();
+
+    setIsPlayingSound(false);
+  };
+  const playUnscanSound = async () => {
+    if (isPlayingSound) {
+      return;
+    }
+
+    setIsPlayingSound(true);
+
+    const { sound } = await Audio.Sound.createAsync(
+      require('../assets/sounds/unscan.mp3')
+    );
+    setUnscanSound(sound);
+
+    await sound.playAsync();
+
+    setIsPlayingSound(false);
+  }
+
+  useEffect(() => {
+    return scanSound
+      ? () => {
+        scanSound.unloadAsync();
+      }
+      : undefined;
+  }, [scanSound]);
+
+  useEffect(() => {
+    return unscanSound
+      ? () => {
+        unscanSound.unloadAsync();
+      }
+      : undefined;
+  }, [unscanSound]);
 
   const loadActiveContainerId = async () => {
     const activeId = await ContainerDB.getActiveContainerId();
@@ -37,6 +91,7 @@ export default function TabTwoScreen({ navigation }: RootTabScreenProps<'TabOne'
 
     setActiveContainerId(activeId);
   };
+
   useEffect(() => {
     loadActiveContainerId();
   }, []);
@@ -59,10 +114,12 @@ export default function TabTwoScreen({ navigation }: RootTabScreenProps<'TabOne'
         ContainerDB.addToContainer(activeContainerId, [data.toString()]).then(() => {
           setLastPushedCodeValue(data.toString());
         });
+        playScanSound();
       } else if (scanningStatus === 'remove') {
         ContainerDB.removeFromContainer(activeContainerId, [data.toString()]).then(() => {
           setLastPushedCodeValue(data.toString());
         });
+        playUnscanSound();
       } else {
         alert('Encountered unexpected scan status value!');
       }
@@ -142,9 +199,11 @@ export default function TabTwoScreen({ navigation }: RootTabScreenProps<'TabOne'
             }
           ]}
           onPressIn={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             setScanningStatus('remove');
           }}
           onPressOut={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             setScanningStatus('none');
           }}
         >
@@ -166,9 +225,11 @@ export default function TabTwoScreen({ navigation }: RootTabScreenProps<'TabOne'
             }
           ]}
           onPressIn={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             setScanningStatus('add');
           }}
           onPressOut={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             setScanningStatus('none');
           }}
         >

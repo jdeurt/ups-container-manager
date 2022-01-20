@@ -2,7 +2,8 @@
   "expo": {
     "name": "ups-container-manager",
     "slug": "ups-container-manager",
-    "version": "1.0.0",
+    "owner": "jdeurt-org",
+    "version": "3.4.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "container-manager",

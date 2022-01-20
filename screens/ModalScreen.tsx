@@ -5,10 +5,12 @@ import * as WebBrowser from 'expo-web-browser';
 import EditScreenInfo from '../components/EditScreenInfo';
 import { Text, View } from '../components/Themed';
 
+import APP_DATA from '../app.json';
+
 export default function ModalScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>UPS Container Manager Alpha</Text>
+      <Text style={styles.title}>UPS Container Manager v{APP_DATA.expo.version}-alpha</Text>
       <Text style={{
         marginTop: 20,
         marginBottom: 20
